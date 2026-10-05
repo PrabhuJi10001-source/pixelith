@@ -25,7 +25,8 @@ from .compression import OutputTooLarge, output_budget, video_bitrate
 from .config import (ASPECT_MODES, ASPECT_RATIOS, MODELS, PRESETS,
                      VIDEO_FPS_CHOICES, WORK_DIR, UpscaleSettings)
 from .engine import available_providers, choose_providers
-from .hardware import describe as describe_hardware
+from .hardware import auxiliary_providers, describe as describe_hardware
+from .hardware import describe_hybrid
 from . import licensing, preview as preview_mod
 from .compat import resource_root, summary as platform_summary
 from .jobs import IMAGE_SUFFIXES, VIDEO_SUFFIXES, MANAGER, classify
@@ -150,7 +151,7 @@ def health() -> dict:
         "version": __version__,
         "providers": available,
         "hardware": describe_hardware(available),
-        "heterogeneous": True,
+        "heterogeneous": describe_hybrid(available),
         "ffmpeg": have_ffmpeg(),
         "active": {k: choose_providers(spec=s)[0] for k, s in MODELS.items()},
         # Published so clients can reject a file before spending an upload on it.
@@ -254,6 +255,7 @@ def estimate(req: EstimateRequest) -> dict:
     provider_plan = [choose_providers(spec=s)[0] for s in [spec]]
     engine_provider = provider_plan[0]
     provider_list = available_providers()
+    devices = describe_hybrid(provider_list)
     hardware_present = any(
         p not in ("CPUExecutionProvider", "AzureExecutionProvider")
         for p in provider_list
@@ -287,6 +289,7 @@ def estimate(req: EstimateRequest) -> dict:
         "human": "Time measured while encoding" if native else human_time(seconds),
         "provider": engine_provider,
         "providers_available": provider_list,
+        "devices": devices,
         "warning": " ".join(warnings) or None,
         "size_budget_bytes": budget_bytes,
         "max_size_ratio": (

@@ -386,6 +386,7 @@ def upscale_image(
         "model": spec.key,
         "provider": eng.provider,
         "providers": eng.active_providers,
+        "devices": eng.device_summary(),
         "output": str(dest),
         "had_alpha": alpha is not None,
         "source_mode": mode,

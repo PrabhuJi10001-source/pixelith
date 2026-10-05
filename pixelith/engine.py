@@ -323,6 +323,25 @@ class Engine:
     def active_providers(self) -> list[str]:
         return [self.provider, *self._worker_providers]
 
+    def device_summary(self) -> dict:
+        """Human-readable CPU+GPU co-execution status for UI and reports."""
+        def short(name: str) -> str:
+            return name.replace("ExecutionProvider", "")
+
+        if len(self._worker_providers):
+            return {
+                "mode": "hybrid",
+                "devices": " + ".join(
+                    short(p) for p in self.active_providers
+                ),
+                "workers": self.workers,
+            }
+        return {
+            "mode": "single",
+            "devices": short(self.provider),
+            "workers": 1,
+        }
+
     def _run_tile(
         self, tile: np.ndarray, worker: _Worker | None = None
     ) -> np.ndarray:

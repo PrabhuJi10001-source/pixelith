@@ -1028,7 +1028,11 @@ function renderEstimates(results) {
         bits.push(`adaptive video ~${(d.target_video_bitrate / 1e6).toFixed(2)} Mbps`);
       }
       if (d.provider) {
-        bits.push(`engine: ${String(d.provider).replace('ExecutionProvider', '')}`);
+        const dv = d.devices || {};
+        const devicesText = dv.mode === 'hybrid'
+          ? `engine: ${dv.devices} (${dv.workers} workers)`
+          : `engine: ${String(d.provider).replace('ExecutionProvider', '')}`;
+        bits.push(devicesText);
       }
       if (d.output_fps) {
         const source = d.source_fps && d.source_fps !== d.output_fps
