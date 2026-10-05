@@ -247,6 +247,24 @@ def estimate(req: EstimateRequest) -> dict:
 
     native = req.kind == "video" and req.video_processing == "native"
     warnings = [warning] if warning and not native else []
+
+    # Machine truth in every estimate: which providers are real, which one the
+    # job would use, and an explicit warning when a CPU-only wheel means the
+    # job will crawl on a machine that actually has a graphics accelerator.
+    provider_plan = [choose_providers(spec=s)[0] for s in [spec]]
+    engine_provider = provider_plan[0]
+    provider_list = available_providers()
+    hardware_present = any(
+        p not in ("CPUExecutionProvider", "AzureExecutionProvider")
+        for p in provider_list
+    )
+    if hardware_present and engine_provider == "CPUExecutionProvider":
+        warnings.append(
+            "This install is using the CPU only even though graphics hardware "
+            "is present. Install a GPU build of ONNX Runtime to fix it: "
+            "pip install onnxruntime-directml (Windows), onnxruntime-gpu "
+            "(Linux) or onnxruntime (macOS)."
+        )
     if req.kind == "video" and req.video_encoding == "quality":
         budget_bytes = None
         target_video_bitrate = None
@@ -267,6 +285,8 @@ def estimate(req: EstimateRequest) -> dict:
         "passes": 0 if native else p.passes,
         "seconds": None if native else round(seconds, 1),
         "human": "Time measured while encoding" if native else human_time(seconds),
+        "provider": engine_provider,
+        "providers_available": provider_list,
         "warning": " ".join(warnings) or None,
         "size_budget_bytes": budget_bytes,
         "max_size_ratio": (

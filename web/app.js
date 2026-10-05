@@ -278,11 +278,23 @@ function setHealth(health) {
   const active = health.active && Object.values(health.active)[0];
   if (active) bits.push(String(active).replace('ExecutionProvider', ''));
   if (health.ffmpeg === false) bits.push('no ffmpeg');
+  // A CPU-only install is THE slowness bug; name it in the UI, not the logs.
+  const providers = health.providers || [];
+  const onCpuOnly = active === 'CPUExecutionProvider'
+    && providers.some((p) => p !== 'CPUExecutionProvider'
+      && p !== 'AzureExecutionProvider');
+  if (onCpuOnly) {
+    bits.push('using CPU only - GPU build of ONNX Runtime not installed');
+    el.healthPill.className = 'pill pill--warn';
+    el.healthPill.title = 'A hardware-aware ONNX Runtime build is not installed. '
+      + 'Install onnxruntime-directml (Windows), onnxruntime-gpu (Linux) or the '
+      + 'default wheel (macOS) to run on your graphics hardware.';
+  }
   setText(el.healthText, bits.join(' · '));
-  el.healthPill.title = health.ffmpeg === false
+  el.healthPill.title = onCpuOnly ? el.healthPill.title : (health.ffmpeg === false
     ? 'FFmpeg was not found — video jobs are unavailable.'
-    : 'Server reachable';
-  if (health.ffmpeg === false) el.healthPill.className = 'pill pill--warn';
+    : 'Server reachable');
+  if (health.ffmpeg === false && !onCpuOnly) el.healthPill.className = 'pill pill--warn';
 }
 
 /* -------------------------------------------------------------------------- *
@@ -1014,6 +1026,9 @@ function renderEstimates(results) {
       }
       if (d.target_video_bitrate) {
         bits.push(`adaptive video ~${(d.target_video_bitrate / 1e6).toFixed(2)} Mbps`);
+      }
+      if (d.provider) {
+        bits.push(`engine: ${String(d.provider).replace('ExecutionProvider', '')}`);
       }
       if (d.output_fps) {
         const source = d.source_fps && d.source_fps !== d.output_fps
