@@ -56,6 +56,28 @@ def test_source_default_preserves_original_frame_rate(source_fps):
     assert output_frames == int(source_fps * 10)
 
 
+def test_frames_are_never_upscaled_by_default():
+    """Product contract: frame RATE is never changed unless the user asks.
+
+    General viewing (24 fps films, clips, ads) does not benefit from frame
+    interpolation - Pixelith duplicates, it does not synthesise motion - so
+    every frame-rate change must be an explicit user decision. The default
+    path (target_fps=None) keeps the source rate end to end, and any
+    deviation in future code must make that default impossible, not
+    merely re-document it.
+    """
+    settings = UpscaleSettings()
+    assert settings.target_fps is None, (
+        "the shipping default must be 'keep the source frame rate'"
+    )
+    info = VideoInfo(1024, 576, 24.0, 240, 10.0, False, "h264")
+    processing_fps, output_fps, ai_frames, output_frames = _frame_rates(
+        info, settings.target_fps
+    )
+    assert (processing_fps, output_fps) == (24.0, 24.0)
+    assert ai_frames == output_frames == 240  # 1:1, no duplication, no drops
+
+
 def test_60_fps_estimate_duplicates_after_ai_instead_of_doubling_inference():
     common = dict(
         kind="video", width=640, height=480, frames=300, fps=30,
