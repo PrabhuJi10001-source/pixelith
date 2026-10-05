@@ -39,7 +39,7 @@ const API = '/api';
 const STORE_KEY = 'pixelith.settings.v1';
 const POLL_MS = 1500;
 const ASSUMED_FPS = 30;               // API contract: assume 30 when fps is unknown
-const VIDEO_FPS_OPTIONS = [24, 30, 60, 120];
+const VIDEO_FPS_OPTIONS = [24, 30, 60, 120, 144, 240];  // slider stops after Source
 const TERMINAL = new Set(['done', 'error', 'cancelled']);
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'bmp', 'tif', 'tiff'];
@@ -102,8 +102,6 @@ const el = {
   videoProcessing: $('#video-processing'),
   videoEncoding: $('#video-encoding'),
   videoFpsWrap: $('#video-fps-wrap'),
-  videoFpsConvert: $('#video-fps-convert'),
-  videoFpsControls: $('#video-fps-controls'),
   videoFps:     $('#video-fps'),
   videoFpsOut:  $('#video-fps-out'),
   denoise:      $('#denoise'),
@@ -379,8 +377,7 @@ function readSettings() {
     aspectMode: el.aspectMode.value,
     videoProcessing: el.videoProcessing.value,
     videoEncoding: el.videoEncoding.value,
-    convertFps: el.videoFpsConvert.checked,
-    videoFps: selectedVideoFps(),
+    videoFpsStop: Number(el.videoFps.value),   // 0 = Source (never change)
     denoise: parseFloat(el.denoise.value),
     sharpen: parseFloat(el.sharpen.value),
     imageFormat: el.imageFormat.value,
@@ -403,36 +400,33 @@ function applySettings(s) {
   if (s.aspectMode) el.aspectMode.value = s.aspectMode;
   if (['ai', 'native'].includes(s.videoProcessing)) el.videoProcessing.value = s.videoProcessing;
   if (['quality', 'bounded'].includes(s.videoEncoding)) el.videoEncoding.value = s.videoEncoding;
-  const hasSavedFps = VIDEO_FPS_OPTIONS.includes(s.videoFps);
-  el.videoFpsConvert.checked = s.convertFps === true || hasSavedFps;
-  if (hasSavedFps) el.videoFps.value = String(VIDEO_FPS_OPTIONS.indexOf(s.videoFps));
-  if (Number.isFinite(s.denoise)) el.denoise.value = clamp(s.denoise, 0, 1);
+  // Frame-rate slider: stop 0 is Source. Saved values from the old checkbox
+  // UI carried an absolute fps; older saves that name a real rate keep it.
+  const savedStop = Number.isFinite(s.videoFpsStop) && s.videoFpsStop >= 0
+    ? s.videoFpsStop : 0;
+  el.videoFps.value = String(clamp(savedStop, 0, VIDEO_FPS_OPTIONS.length));
+  syncSliderOutputs();
   if (Number.isFinite(s.sharpen)) el.sharpen.value = clamp(s.sharpen, 0, 1);
   if (s.imageFormat) el.imageFormat.value = s.imageFormat;
   if (s.videoFormat) el.videoFormat.value = s.videoFormat;
   syncSliderOutputs();
   syncTargetMode();
   syncAspectControls();
-  syncFpsControls();
 }
 
 function syncSliderOutputs() {
   setText(el.scaleOut, `${parseFloat(el.scale.value).toFixed(1)}×`);
   setText(el.denoiseOut, parseFloat(el.denoise.value).toFixed(2));
   setText(el.sharpenOut, parseFloat(el.sharpen.value).toFixed(2));
-  const fps = VIDEO_FPS_OPTIONS[Number(el.videoFps.value)];
-  setText(el.videoFpsOut, `${fps} FPS`);
+  const stop = Number(el.videoFps.value);
+  setText(el.videoFpsOut, stop === 0 ? 'Source · keep as-is' : `${VIDEO_FPS_OPTIONS[stop - 1]} FPS`);
 }
 
+/** null = keep the source frame rate (stop 0). Otherwise the chosen rate. */
 function selectedVideoFps() {
-  if (!el.videoFpsConvert.checked) return null;
-  return VIDEO_FPS_OPTIONS[Number(el.videoFps.value)] ?? null;
-}
-
-function syncFpsControls() {
-  const enabled = el.videoFpsConvert.checked;
-  el.videoFpsControls.hidden = !enabled;
-  el.videoFps.disabled = !enabled;
+  const stop = Number(el.videoFps.value);
+  if (!stop) return null;
+  return VIDEO_FPS_OPTIONS[stop - 1] ?? null;
 }
 
 function syncTargetMode() {
@@ -1924,11 +1918,6 @@ function wireSettings() {
   [el.scale, el.denoise, el.sharpen, el.videoFps].forEach((input) => {
     input.addEventListener('input', syncSliderOutputs);
     input.addEventListener('change', () => { saveSettings(); scheduleEstimate(); });
-  });
-  el.videoFpsConvert.addEventListener('change', () => {
-    syncFpsControls();
-    saveSettings();
-    scheduleEstimate();
   });
 
   // input fires while dragging so the readout tracks the thumb; change commits.

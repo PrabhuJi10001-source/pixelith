@@ -10,7 +10,7 @@ from pixelith.video import VideoInfo, _frame_rates, _open_decoder, _open_encoder
 
 
 def test_supported_frame_rates_and_source_default():
-    assert VIDEO_FPS_CHOICES == (24, 30, 60, 120)
+    assert VIDEO_FPS_CHOICES == (24, 30, 60, 120, 144, 240)
     assert UpscaleSettings().target_fps is None
 
 

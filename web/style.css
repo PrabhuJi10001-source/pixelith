@@ -412,6 +412,9 @@ select:hover { border-color: var(--text-3); }
 .check-row strong { font-size: var(--fs-sm); }
 .check-row small { color: var(--text-3); font-size: var(--fs-xs); }
 .slider-scale--four { grid-template-columns: repeat(4, 1fr); }
+.slider-scale--seven span { flex: 1; text-align: center; }
+.slider-scale--seven span:first-child { text-align: left; }
+.slider-scale--seven span:last-child { text-align: right; }
 .slider-value {
   font-size: var(--fs-sm); font-weight: 620; color: var(--accent);
   font-variant-numeric: tabular-nums;
