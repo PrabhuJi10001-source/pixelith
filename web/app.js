@@ -1366,15 +1366,37 @@ function paintActions(view) {
   }
 
   if (job.status === 'done') {
-    const link = document.createElement('a');
-    link.className = 'btn btn--primary';
-    link.href = `${API}/jobs/${encodeURIComponent(job.id)}/download`;
-    link.setAttribute('download', job.output_name || '');
-    link.appendChild(svgIcon('i-download'));
-    link.appendChild(document.createTextNode('Download'));
-    // Long output names would blow out the button, so they live in the tooltip.
-    if (job.output_name) link.title = `Download ${job.output_name}`;
-    box.appendChild(link);
+    // Inside the packaged desktop app, WKWebView ignores anchor downloads
+    // silently — the bridge reveals the already-local file instead. Browsers
+    // keep the normal download link.
+    const outputPath = job.report && job.report.output;
+    const bridge = window.pywebview && window.pywebview.api;
+    const inDesktop = !!(bridge && typeof bridge.reveal_output === 'function');
+
+    if (inDesktop && outputPath) {
+      const reveal = button('Show in Finder', 'i-download', 'btn btn--primary');
+      reveal.addEventListener('click', async () => {
+        reveal.disabled = true;
+        try {
+          const ok = await bridge.reveal_output(outputPath);
+          if (!ok) throw new Error('The output file could not be located.');
+        } catch (err) {
+          reveal.disabled = false;
+          toast(err && err.message ? err.message : 'Revealing the file failed.', 'error');
+        }
+      });
+      box.appendChild(reveal);
+    } else {
+      const link = document.createElement('a');
+      link.className = 'btn btn--primary';
+      link.href = `${API}/jobs/${encodeURIComponent(job.id)}/download`;
+      link.setAttribute('download', job.output_name || '');
+      link.appendChild(svgIcon('i-download'));
+      link.appendChild(document.createTextNode('Download'));
+      // Long output names would blow out the button, so they live in the tooltip.
+      if (job.output_name) link.title = `Download ${job.output_name}`;
+      box.appendChild(link);
+    }
   }
 
   if (TERMINAL.has(job.status)) {
