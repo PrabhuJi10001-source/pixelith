@@ -267,6 +267,20 @@ def estimate(req: EstimateRequest) -> dict:
             "pip install onnxruntime-directml (Windows), onnxruntime-gpu "
             "(Linux) or onnxruntime (macOS)."
         )
+
+    # Long-job triage: when the AI pass crosses half an hour, ship the
+    # Quick-resize alternative in the payload so the interface can offer a
+    # one-tap switch instead of a warning the user has to decode alone.
+    long_job = (
+        req.kind == "video"
+        and req.video_processing == "ai"
+        and seconds > 1800
+    )
+    if long_job:
+        warnings.append(
+            "For a video this long, Quick resize reaches the same resolution "
+            "in minutes - AI detail recovery is the slow part."
+        )
     if req.kind == "video" and req.video_encoding == "quality":
         budget_bytes = None
         target_video_bitrate = None
@@ -290,6 +304,7 @@ def estimate(req: EstimateRequest) -> dict:
         "provider": engine_provider,
         "providers_available": provider_list,
         "devices": devices,
+        "long_job": long_job,
         "warning": " ".join(warnings) or None,
         "size_budget_bytes": budget_bytes,
         "max_size_ratio": (

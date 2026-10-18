@@ -1063,6 +1063,31 @@ function renderEstimates(results) {
     box.appendChild(span);
     el.estimateWarn.appendChild(box);
   }
+
+  // Long AI job: offer the one-tap escape hatch next to the warning.
+  const longJob = results.some((res) => res.data && res.data.long_job);
+  if (longJob && el.videoProcessing.value === 'ai') {
+    const box = document.createElement('div');
+    box.className = 'warning warning--action';
+    box.appendChild(svgIcon('i-clock'));
+    const span = document.createElement('span');
+    span.textContent = 'One tap switches this job to Quick resize \u2014 same resolution, minutes instead of hours:';
+    box.appendChild(span);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn--sm';
+    btn.textContent = 'Switch to Quick resize';
+    btn.addEventListener('click', () => {
+      el.videoProcessing.value = 'native';
+      saveSettings();
+      syncFormatVisibility();
+      renderQueue();
+      scheduleEstimate();
+      toast('Switched to Quick resize. AI enhancement is off for this job.', 'success', 6000);
+    });
+    box.appendChild(btn);
+    el.estimateWarn.appendChild(box);
+  }
 }
 
 /* -------------------------------------------------------------------------- *

@@ -584,6 +584,9 @@ input[type="range"]::-moz-range-thumb {
   font-size: var(--fs-sm); font-weight: 560; line-height: 1.45;
 }
 .warning .icon { width: 18px; height: 18px; margin-top: 1px; }
+.warning--action { flex-wrap: wrap; align-items: center; }
+.warning--action span { flex: 1 1 240px; }
+.warning--action .btn { flex: 0 0 auto; }
 
 /* ----------------------------------------------------------------- jobs -- */
 .jobs { list-style: none; padding: 0; display: grid; gap: var(--s-4); }
